@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FBF7F3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#15120E" media="(prefers-color-scheme: dark)">
+<title>Training</title>
+<style>
+  :root {
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+    --bg-base: #FBF7F3;
+    --blob-1: rgba(255, 106, 69, 0.16);
+    --blob-2: rgba(255, 177, 58, 0.15);
+
+    --card-bg: rgba(255, 255, 255, 0.58);
+    --card-border: rgba(120, 72, 40, 0.10);
+    --card-shadow: rgba(255, 106, 69, 0.20);
+
+    --text: #241A12;
+    --text-secondary: #9C8877;
+
+    --tile-bg: #EFE7DF;
+    --tile-shadow: rgba(120, 72, 40, 0.08);
+
+    --accent-1: #FF6A45;
+    --accent-2: #FFB13A;
+    --accent-glow: rgba(255, 106, 69, 0.38);
+    --accent-tint: rgba(255, 106, 69, 0.14);
+
+    --outer-pad: 10px;
+    --card-pad: 10px;
+
+    /* Zellhöhe hängt an der Bildschirmhöhe -> 3 Monate passen ohne Scrollen.
+       Die Breite kommt separat aus 1fr-Spalten -> Raster füllt die volle Breite. */
+    --cell-h: clamp(17px, 2.35dvh, 27px);
+    --gap: clamp(3px, 0.42dvh, 5px);
+    --cell-radius: calc(var(--cell-h) * 0.4);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg-base: #15110D;
+      --blob-1: rgba(255, 124, 82, 0.20);
+      --blob-2: rgba(255, 194, 78, 0.16);
+
+      --card-bg: rgba(36, 30, 24, 0.55);
+      --card-border: rgba(255, 200, 160, 0.10);
+      --card-shadow: rgba(255, 124, 82, 0.22);
+
+      --text: #F6EEE5;
+      --text-secondary: #B29E8C;
+
+      --tile-bg: #241E18;
+      --tile-shadow: rgba(0, 0, 0, 0.3);
+
+      --accent-1: #FF7C52;
+      --accent-2: #FFC24E;
+      --accent-glow: rgba(255, 124, 82, 0.45);
+      --accent-tint: rgba(255, 140, 90, 0.18);
+    }
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0;
+    min-height: 100%;
+    color: var(--text);
+    font-family: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont,
+                 "Helvetica Neue", Arial, sans-serif;
+    overscroll-behavior-y: contain;
+  }
+
+  body {
+    background:
+      radial-gradient(ellipse 60% 38% at 8% -8%, var(--blob-1), transparent 60%),
+      radial-gradient(ellipse 55% 42% at 105% 4%, var(--blob-2), transparent 58%),
+      var(--bg-base);
+    background-attachment: fixed;
+  }
+
+  #topbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    padding-top: var(--safe-top);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+    background: rgba(251, 247, 243, 0.7);
+    border-bottom: 1px solid transparent;
+    transition: border-color .25s ease;
+  }
+  @media (prefers-color-scheme: dark) {
+    #topbar { background: rgba(21, 17, 13, 0.7); }
+  }
+  #topbar.scrolled { border-bottom-color: var(--card-border); }
+
+  .title-gradient {
+    background: linear-gradient(100deg, var(--accent-1), var(--accent-2) 85%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Großer Titel: schrumpft beim Scrollen weg und macht Platz für den kompakten Titel */
+  .title-large {
+    font-size: clamp(24px, 7vw, 29px);
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    padding: 9px 18px 4px;
+    max-height: 46px;
+    overflow: hidden;
+    opacity: 1;
+    transition: opacity .2s ease, max-height .2s ease, padding .2s ease;
+  }
+  #topbar.scrolled .title-large {
+    opacity: 0;
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  /* Kompakter Titel: normaler Layout-Fluss statt Overlay -> keine Überlappung mit den Wochentagen */
+  .title-small {
+    text-align: center;
+    font-weight: 900;
+    font-size: 16px;
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height .2s ease, opacity .2s ease, padding .2s ease;
+  }
+  #topbar.scrolled .title-small {
+    max-height: 34px;
+    opacity: 1;
+    padding: 8px 0 4px;
+  }
+
+  .weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: var(--gap);
+    padding: 2px calc(var(--outer-pad) + var(--card-pad)) 8px;
+  }
+  .weekdays span {
+    text-align: center;
+    font-size: clamp(9.5px, 2.2vw, 11px);
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--accent-1);
+    opacity: 0.75;
+  }
+
+  main {
+    padding: 6px var(--outer-pad) calc(24px + var(--safe-bottom));
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  .month {
+    margin-bottom: 9px;
+    padding: 8px var(--card-pad) 9px;
+    border-radius: 22px;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    box-shadow: 0 10px 22px -16px var(--card-shadow);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+
+  .month-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 2px 6px;
+  }
+  .month-name {
+    font-size: clamp(14px, 3.9vw, 16px);
+    font-weight: 900;
+    letter-spacing: -0.01em;
+  }
+  .month-count {
+    font-size: clamp(10px, 2.6vw, 11.5px);
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--accent-1);
+    background: var(--accent-tint);
+    padding: 3px 9px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  .week-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    grid-auto-rows: var(--cell-h);
+    gap: var(--gap);
+  }
+
+  .cell {
+    border-radius: var(--cell-radius);
+    background: var(--tile-bg);
+    box-shadow: inset 0 1px 1px var(--tile-shadow);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: calc(var(--cell-h) * 0.52);
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-secondary);
+    cursor: pointer;
+    user-select: none;
+    transition: transform .12s ease, background .15s ease, color .15s ease, box-shadow .15s ease;
+  }
+  .cell.empty { background: transparent; box-shadow: none; cursor: default; }
+  .cell:active:not(.empty) { transform: scale(0.85); }
+
+  .cell.marked {
+    background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+    color: #fff;
+    font-weight: 900;
+    box-shadow:
+      0 3px 9px -2px var(--accent-glow),
+      inset 0 1px 1px rgba(255, 255, 255, 0.4);
+  }
+
+  .cell.today { box-shadow: inset 0 0 0 2px var(--accent-1); }
+  .cell.marked.today {
+    box-shadow:
+      inset 0 0 0 2px rgba(255, 255, 255, 0.9),
+      0 3px 9px -2px var(--accent-glow);
+  }
+
+  .cell:focus-visible {
+    outline: 2px solid var(--accent-1);
+    outline-offset: 2px;
+  }
+
+  #sentinel { height: 1px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <div class="title-large title-gradient">Training</div>
+  <div class="title-small title-gradient">Training</div>
+  <div class="weekdays">
+    <span>Mo</span><span>Di</span><span>Mi</span><span>Do</span><span>Fr</span><span>Sa</span><span>So</span>
+  </div>
+</div>
+
+<main>
+  <div id="months"></div>
+  <div id="sentinel"></div>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "training-days-v1";
+  var START_YEAR = 2026;
+  var START_MONTH = 0; // Januar 2026 (0-indexed)
+  var LOAD_AHEAD_MONTHS = 6; // wie viele Monate über den aktuellen Monat hinaus initial geladen werden
+  var BATCH_SIZE = 3; // Monate pro Nachlade-Schritt beim Scrollen
+
+  var MONTH_NAMES = [
+    "Januar", "Februar", "März", "April", "Mai", "Juni",
+    "Juli", "August", "September", "Oktober", "November", "Dezember"
+  ];
+
+  var marked = loadMarked();
+
+  var monthsEl = document.getElementById("months");
+  var sentinel = document.getElementById("sentinel");
+  var topbar = document.getElementById("topbar");
+
+  var nextY = START_YEAR;
+  var nextM = START_MONTH;
+
+  function loadMarked() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      return new Set(raw ? JSON.parse(raw) : []);
+    } catch (e) {
+      return new Set();
+    }
+  }
+
+  function saveMarked() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(marked)));
+    } catch (e) { /* Speicher nicht verfügbar – still ignorieren */ }
+  }
+
+  function pad(n) { return n < 10 ? "0" + n : "" + n; }
+
+  function isoDate(y, m, d) {
+    return y + "-" + pad(m + 1) + "-" + pad(d);
+  }
+
+  function daysInMonth(y, m) {
+    return new Date(y, m + 1, 0).getDate();
+  }
+
+  // Montag = 0 ... Sonntag = 6
+  function mondayFirstIndex(y, m) {
+    var jsDay = new Date(y, m, 1).getDay(); // Sonntag=0
+    return (jsDay + 6) % 7;
+  }
+
+  var today = new Date();
+  var todayIso = isoDate(today.getFullYear(), today.getMonth(), today.getDate());
+
+  function buildMonth(y, m) {
+    var section = document.createElement("section");
+    section.className = "month";
+    section.dataset.y = y;
+    section.dataset.m = m;
+
+    var header = document.createElement("div");
+    header.className = "month-header";
+
+    var name = document.createElement("div");
+    name.className = "month-name";
+    name.textContent = MONTH_NAMES[m] + " " + y;
+
+    var count = document.createElement("div");
+    count.className = "month-count";
+
+    header.appendChild(name);
+    header.appendChild(count);
+
+    var grid = document.createElement("div");
+    grid.className = "week-grid";
+
+    var total = daysInMonth(y, m);
+    var offset = mondayFirstIndex(y, m);
+
+    for (var i = 0; i < offset; i++) {
+      var empty = document.createElement("div");
+      empty.className = "cell empty";
+      grid.appendChild(empty);
+    }
+
+    var markedCount = 0;
+
+    for (var d = 1; d <= total; d++) {
+      var iso = isoDate(y, m, d);
+      var cell = document.createElement("div");
+      cell.className = "cell";
+      cell.dataset.date = iso;
+      cell.textContent = d;
+      cell.setAttribute("role", "button");
+      cell.setAttribute("tabindex", "0");
+
+      var isMarked = marked.has(iso);
+      if (isMarked) { cell.classList.add("marked"); markedCount++; }
+      if (iso === todayIso) cell.classList.add("today");
+
+      cell.setAttribute("aria-pressed", isMarked ? "true" : "false");
+      cell.setAttribute("aria-label", d + ". " + MONTH_NAMES[m] + " " + y + (isMarked ? ", trainiert" : ", nicht trainiert"));
+
+      attachToggle(cell, count, total);
+      grid.appendChild(cell);
+    }
+
+    count.textContent = markedCount + "/" + total;
+
+    section.appendChild(header);
+    section.appendChild(grid);
+    return section;
+  }
+
+  function attachToggle(cell, countEl, total) {
+    function toggle() {
+      var iso = cell.dataset.date;
+      var isMarked = marked.has(iso);
+      if (isMarked) {
+        marked.delete(iso);
+        cell.classList.remove("marked");
+        cell.setAttribute("aria-pressed", "false");
+      } else {
+        marked.add(iso);
+        cell.classList.add("marked");
+        cell.setAttribute("aria-pressed", "true");
+      }
+      saveMarked();
+
+      var grid = cell.parentElement;
+      var markedCount = grid.querySelectorAll(".cell.marked").length;
+      countEl.textContent = markedCount + "/" + total;
+    }
+
+    cell.addEventListener("click", toggle);
+    cell.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        toggle();
+      }
+    });
+  }
+
+  function loadMoreMonths(count) {
+    var frag = document.createDocumentFragment();
+    for (var i = 0; i < count; i++) {
+      frag.appendChild(buildMonth(nextY, nextM));
+      nextM++;
+      if (nextM > 11) { nextM = 0; nextY++; }
+    }
+    monthsEl.appendChild(frag);
+  }
+
+  // Initiales Laden: Start bis (aktueller Monat + Puffer)
+  var monthsUntilCurrent =
+    (today.getFullYear() - START_YEAR) * 12 + (today.getMonth() - START_MONTH) + 1;
+  var initialCount = Math.max(monthsUntilCurrent + LOAD_AHEAD_MONTHS, LOAD_AHEAD_MONTHS + 1);
+  loadMoreMonths(initialCount);
+
+  // Endloses Nachladen zukünftiger Monate
+  var observer = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      if (entry.isIntersecting) loadMoreMonths(BATCH_SIZE);
+    });
+  }, { rootMargin: "600px 0px" });
+  observer.observe(sentinel);
+
+  // Kopfzeile beim Scrollen einklappen (iOS Large-Title-Effekt)
+  window.addEventListener("scroll", function () {
+    if (window.scrollY > 8) topbar.classList.add("scrolled");
+    else topbar.classList.remove("scrolled");
+  }, { passive: true });
+
+  // Beim Start zum aktuellen Monat springen
+  requestAnimationFrame(function () {
+    var currentSection = monthsEl.querySelector(
+      '.month[data-y="' + today.getFullYear() + '"][data-m="' + today.getMonth() + '"]'
+    );
+    if (currentSection) {
+      var top = currentSection.getBoundingClientRect().top + window.scrollY;
+      var headerHeight = topbar.getBoundingClientRect().height;
+      window.scrollTo({ top: Math.max(top - headerHeight - 8, 0), behavior: "auto" });
+    }
+  });
+})();
+</script>
+
+</body>
+</html>
